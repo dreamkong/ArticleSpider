@@ -61,6 +61,11 @@ class JobboleSpider(scrapy.Spider):
         css_create_date = response.css('p.entry-meta-hide-on-mobile::text').extract()[0].replace('·','').strip()
 
         css_like_nums = response.css('.vote-post-up h10::text').extract()[0]
+        match_re = re.match('.*(\d).*', css_like_nums)
+        if match_re:
+            css_like_nums = int(match_re.group(1))
+        else:
+            css_like_nums = 0
         css_fav_nums = response.css('.bookmark-btn::text').extract()[0]
         match_re = re.match('.*(\d).*', css_fav_nums)
         if match_re:
