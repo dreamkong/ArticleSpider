@@ -23,6 +23,7 @@ def add_jobbole(value):
 
 
 def date_convert(value):
+    value = value.replace('·','').strip()
     try:
         create_date = datetime.datetime.strptime(value, '%Y/%m/%d').date()
     except Exception as e:
@@ -62,8 +63,7 @@ class JobBoleArticleItem(scrapy.Item):
         input_processor=MapCompose(add_jobbole)
     )
     create_date = scrapy.Field(
-        input_processor=MapCompose(date_convert),
-        output_processor=TakeFirst()
+        input_processor=MapCompose(date_convert)
     )
     url = scrapy.Field()
     url_object_id = scrapy.Field()
