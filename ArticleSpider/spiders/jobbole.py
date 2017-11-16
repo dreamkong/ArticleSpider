@@ -4,8 +4,9 @@ import re
 from scrapy.http import Request
 from urllib import parse
 import datetime
+from scrapy.loader import ItemLoader
 
-from ArticleSpider.items import JobBoleArticleItem
+from ArticleSpider.items import JobBoleArticleItem, ArticleItemLoader
 from ArticleSpider.utils.common import get_md5
 
 class JobboleSpider(scrapy.Spider):
@@ -34,8 +35,7 @@ class JobboleSpider(scrapy.Spider):
 
     def paese_detail(self, response):
 
-        article_item = JobBoleArticleItem()
-
+        # article_item = JobBoleArticleItem()
         # xpath()
         # title = response.xpath('//div[@class="entry-header"]/h1/text()').extract()[0]
         # create_date = response.xpath('//p[@class="entry-meta-hide-on-mobile"]/text()').extract()[0].replace('·','').strip()
@@ -56,48 +56,64 @@ class JobboleSpider(scrapy.Spider):
 
         # css选择器
 
-        front_image_url = response.meta.get('front_image_url','') # 文章封面图
-        css_title = response.css('div.entry-header > h1::text').extract()
-        css_create_date = response.css('p.entry-meta-hide-on-mobile::text').extract()[0].replace('·','').strip()
+        # front_image_url = response.meta.get('front_image_url','') # 文章封面图
+        # css_title = response.css('div.entry-header > h1::text').extract()
+        # css_create_date = response.css('p.entry-meta-hide-on-mobile::text').extract()[0].replace('·','').strip()
+        #
+        # css_like_nums = response.css('.vote-post-up h10::text').extract()[0]
+        # match_re = re.match('.*(\d).*', css_like_nums)
+        # if match_re:
+        #     css_like_nums = int(match_re.group(1))
+        # else:
+        #     css_like_nums = 0
+        # css_fav_nums = response.css('.bookmark-btn::text').extract()[0]
+        # match_re = re.match('.*(\d).*', css_fav_nums)
+        # if match_re:
+        #     css_fav_nums = int(match_re.group(1))
+        # else:
+        #     css_fav_nums = 0
+        # css_comment_nums = response.css('a[href = "#article-comment"] > span::text').extract()[0]
+        # match_re = re.match('.*(\d).*', css_comment_nums)
+        # if match_re:
+        #     css_comment_nums = int(match_re.group(1))
+        # else:
+        #     css_comment_nums = 0
+        #
+        # css_content = response.css('div.entry').extract()[0]
+        # css_tag_list = response.css('p.entry-meta-hide-on-mobile a::text').extract()
+        # css_tag_list = [ele for ele in css_tag_list if not ele.strip().endswith('评论')]
+        # css_tags = ','.join(css_tag_list)
+        #
+        # article_item['url_object_id'] = get_md5(response.url)
+        # article_item['title'] = css_title
+        # article_item['url'] = response.url
+        # try:
+        #     css_create_date = datetime.datetime.strptime(css_create_date,'%Y/%m/%d').date()
+        # except Exception as e:
+        #     css_create_date = datetime.datetime.now().date()
+        #
+        # article_item['create_date'] = css_create_date
+        # article_item['front_image_url'] = [front_image_url]
+        # article_item['like_nums'] = css_like_nums
+        # article_item['comment_nums'] = css_comment_nums
+        # article_item['fav_nums'] = css_fav_nums
+        # article_item['tags'] = css_tags
+        # article_item['content'] = css_content
 
-        css_like_nums = response.css('.vote-post-up h10::text').extract()[0]
-        match_re = re.match('.*(\d).*', css_like_nums)
-        if match_re:
-            css_like_nums = int(match_re.group(1))
-        else:
-            css_like_nums = 0
-        css_fav_nums = response.css('.bookmark-btn::text').extract()[0]
-        match_re = re.match('.*(\d).*', css_fav_nums)
-        if match_re:
-            css_fav_nums = int(match_re.group(1))
-        else:
-            css_fav_nums = 0
-        css_comment_nums = response.css('a[href = "#article-comment"] > span::text').extract()[0]
-        match_re = re.match('.*(\d).*', css_comment_nums)
-        if match_re:
-            css_comment_nums = int(match_re.group(1))
-        else:
-            css_comment_nums = 0
+        #通过item loader加载item
+        front_image_url = response.meta.get("front_image_url", "")  # 文章封面图
+        item_loader = ArticleItemLoader(item=JobBoleArticleItem(), response=response)
+        item_loader.add_css("title", ".entry-header h1::text")
+        item_loader.add_value("url", response.url)
+        item_loader.add_value("url_object_id", get_md5(response.url))
+        item_loader.add_css("create_date", "p.entry-meta-hide-on-mobile::text")
+        item_loader.add_value("front_image_url", [front_image_url])
+        item_loader.add_css("like_nums", ".vote-post-up h10::text")
+        item_loader.add_css("comment_nums", "a[href='#article-comment'] span::text")
+        item_loader.add_css("fav_nums", ".bookmark-btn::text")
+        item_loader.add_css("tags", "p.entry-meta-hide-on-mobile a::text")
+        item_loader.add_css("content", "div.entry")
 
-        css_content = response.css('div.entry').extract()[0]
-        css_tag_list = response.css('p.entry-meta-hide-on-mobile a::text').extract()
-        css_tag_list = [ele for ele in css_tag_list if not ele.strip().endswith('评论')]
-        css_tags = ','.join(css_tag_list)
-
-        article_item['url_object_id'] = get_md5(response.url)
-        article_item['title'] = css_title
-        article_item['url'] = response.url
-        try:
-            css_create_date = datetime.datetime.strptime(css_create_date,'%Y/%m/%d').date()
-        except Exception as e:
-            css_create_date = datetime.datetime.now().date()
-
-        article_item['create_date'] = css_create_date
-        article_item['front_image_url'] = [front_image_url]
-        article_item['like_nums'] = css_like_nums
-        article_item['comment_nums'] = css_comment_nums
-        article_item['fav_nums'] = css_fav_nums
-        article_item['tags'] = css_tags
-        article_item['content'] = css_content
+        article_item = item_loader.load_item()
 
         yield article_item
