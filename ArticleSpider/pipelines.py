@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+__author__ = 'dreamkong'
 
 # Define your item pipelines here
 #

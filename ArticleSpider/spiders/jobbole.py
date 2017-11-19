@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+__author__ = 'dreamkong'
+
 import scrapy
 import re
 from scrapy.http import Request
