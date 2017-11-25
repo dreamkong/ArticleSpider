@@ -4,6 +4,8 @@ import re
 import json
 import requests
 
+session = requests.session()
+
 
 class ZhihuSpider(scrapy.Spider):
     name = 'zhihu'
@@ -22,11 +24,11 @@ class ZhihuSpider(scrapy.Spider):
     def start_requests(self):
         return [scrapy.Request('https://www.zhihu.com/#signin', headers=self.headers, callback=self.login)]
 
-    def get_captcha():
+    def get_captcha(self):
         import time
         t = str(int(time.time() * 1000))
         captcha_url = "https://www.zhihu.com/captcha.gif?r={0}&type=login".format(t)
-        t = session.get(captcha_url, headers=headers)
+        t = session.get(captcha_url, headers=self.headers)
         with open("captcha.jpg", "wb") as f:
             f.write(t.content)
             f.close()
@@ -43,12 +45,11 @@ class ZhihuSpider(scrapy.Spider):
         return captcha
 
     def login(self, response):
-
         response_text = response.text
-        xsrf = ''
         match_obj = re.match('.*name="_xsrf" value="(.*?)"', response_text, re.DOTALL)
+        xsrf = ''
         if match_obj:
-            xsrf = match_obj.group(1)
+            xsrf = (match_obj.group(1))
 
         if xsrf:
             post_url = "https://www.zhihu.com/login/email"
@@ -56,14 +57,61 @@ class ZhihuSpider(scrapy.Spider):
                 "_xsrf": xsrf,
                 "email": '48486297@qq.com',
                 "password": '521211',
-                # "captcha": get_captcha()
+                "captcha": '',
             }
-            return [scrapy.FormRequest(
-                url=post_url,
-                formdata=post_data,
-                headers=self.headers,
-                callback=self.check_login
-            )]
+
+            import time
+            t = str(int(time.time() * 1000))
+            captcha_url = "https://www.zhihu.com/captcha.gif?r={0}&type=login".format(t)
+            yield scrapy.Request(captcha_url, headers=self.headers, meta={"post_data":post_data}, callback=self.login_after_captcha)
+
+
+    def login_after_captcha(self, response):
+        with open("captcha.jpg", "wb") as f:
+            f.write(response.body)
+            f.close()
+
+        from PIL import Image
+        try:
+            im = Image.open('captcha.jpg')
+            im.show()
+            im.close()
+        except:
+            pass
+
+        captcha = input("输入验证码\n>")
+
+        post_data = response.meta.get("post_data", {})
+        post_url = "https://www.zhihu.com/login/email"
+        post_data["captcha"] = captcha
+        return [scrapy.FormRequest(
+            url=post_url,
+            formdata=post_data,
+            headers=self.headers,
+            callback=self.check_login
+        )]
+
+    # def login(self, response):
+    #     response_text = response.text
+    #     xsrf = ''
+    #     match_obj = re.match('.*name="_xsrf" value="(.*?)"', response_text, re.DOTALL)
+    #     if match_obj:
+    #         xsrf = match_obj.group(1)
+    #
+    #     if xsrf:
+    #         post_url = "https://www.zhihu.com/login/email"
+    #         post_data = {
+    #             "_xsrf": xsrf,
+    #             "email": '48486297@qq.com',
+    #             "password": '521211',
+    #             "captcha": self.get_captcha(),
+    #         }
+    #         return [scrapy.FormRequest(
+    #             url=post_url,
+    #             formdata=post_data,
+    #             headers=self.headers,
+    #             callback=self.check_login
+    #         )]
 
     def check_login(self, response):
         # 检查服务器的返回数据是是否成功
