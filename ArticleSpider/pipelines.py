@@ -13,11 +13,10 @@ from scrapy.pipelines.images import ImagesPipeline
 from scrapy.exporters import JsonItemExporter
 from twisted.enterprise import adbapi
 
-import MySQLdb
-import MySQLdb.cursors
+import pymysql
 
 
-class ArticlespiderPipeline(object):
+class ArticleSpiderPipeline(object):
     def process_item(self, item, spider):
         return item
 
@@ -55,12 +54,12 @@ class JsonExporterPipeline(object):
 class MysqlPipeline(object):
     # 采用同步的机制写入mysql
     def __init__(self):
-        self.conn = MySQLdb.connect('localhost', 'root', 'root', 'article_spider', charset="utf8", use_unicode=True)
+        self.conn = pymysql.connect('localhost', 'root', 'root', 'article_spider', charset="utf8", use_unicode=True)
         self.cursor = self.conn.cursor()
 
     def process_item(self, item, spider):
         insert_sql = """
-            insert into jobbole_article(title, url, url_object_id, create_date, fav_nums)
+            insert into jobbole_articles(title, url, url_object_id, create_date, fav_nums)
             VALUES (%s, %s, %s, %s, %s)
         """
         self.cursor.execute(insert_sql,
@@ -81,10 +80,10 @@ class MysqlTwistedPipeline(object):
             user=settings['MYSQL_USER'],
             passwd=settings['MYSQL_PASSWORD'],
             charset='utf8',
-            cursorclass=MySQLdb.cursors.DictCursor,
+            cursorclass=pymysql.cursors.DictCursor,
             use_unicode=True,
         )
-        dbpool = adbapi.ConnectionPool('MySQLdb', **dbparms)
+        dbpool = adbapi.ConnectionPool('pymysql', **dbparms)
         return cls(dbpool)
 
     def process_item(self, item, spider):
@@ -98,14 +97,8 @@ class MysqlTwistedPipeline(object):
 
     def do_insert(self, cursor, item):
         # 执行具体的插入
-        insert_sql = """
-                    insert into jobbole_article(title, create_date, url, url_object_id, front_image_url, comment_nums,
-                     fav_nums, like_nums, tags, content)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                """
-        cursor.execute(insert_sql,
-                       (item["title"], item["create_date"], item["url"], item['url_object_id'], item["front_image_url"],
-                        item["comment_nums"], item["fav_nums"], item["like_nums"], item["tags"], item["content"]))
+        insert_sql, params = item.get_insert_sql()
+        cursor.execute(insert_sql, params)
 
 
 class ArticleImagePipeline(ImagesPipeline):

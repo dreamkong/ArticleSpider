@@ -1,15 +1,14 @@
 # -*- coding: utf-8 -*-
 __author__ = 'dreamkong'
 
-import scrapy
-import re
-from scrapy.http import Request
 from urllib import parse
-import datetime
-from scrapy.loader import ItemLoader
+
+import scrapy
+from scrapy.http import Request
 
 from ArticleSpider.items import JobBoleArticleItem, ArticleItemLoader
 from ArticleSpider.utils.common import get_md5
+
 
 class JobboleSpider(scrapy.Spider):
     name = 'jobbole'
@@ -28,14 +27,15 @@ class JobboleSpider(scrapy.Spider):
         for post_node in post_nodes:
             front_image_url = post_node.css('img::attr(src)').extract_first('')
             post_url = post_node.css('::attr(href)').extract_first('')
-            yield Request(url=parse.urljoin(response.url, post_url), meta={'front_image_url':front_image_url}, callback=self.paese_detail)
+            yield Request(url=parse.urljoin(response.url, post_url), meta={'front_image_url': front_image_url},
+                          callback=self.parse_detail)
 
         # 提取下一页并交给scrapy下载
         next_urls = response.css('.next.page-numbers::attr(href)').extract_first('')
         if next_urls:
             yield Request(url=parse.urljoin(response.url, next_urls), callback=self.parse)
 
-    def paese_detail(self, response):
+    def parse_detail(self, response):
 
         # article_item = JobBoleArticleItem()
         # xpath()
@@ -102,7 +102,7 @@ class JobboleSpider(scrapy.Spider):
         # article_item['tags'] = css_tags
         # article_item['content'] = css_content
 
-        #通过item loader加载item
+        # 通过item loader加载item
         front_image_url = response.meta.get("front_image_url", "")  # 文章封面图
         item_loader = ArticleItemLoader(item=JobBoleArticleItem(), response=response)
         item_loader.add_css("title", ".entry-header h1::text")
