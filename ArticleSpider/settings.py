@@ -2,6 +2,7 @@
 __author__ = 'dreamkong'
 
 import os
+import sys
 
 # Scrapy settings for ArticleSpider project
 #
@@ -42,8 +43,10 @@ ROBOTSTXT_OBEY = False
 
 # Override the default request headers:
 # DEFAULT_REQUEST_HEADERS = {
-#   'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-#   'Accept-Language': 'en',
+#     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+#     'Accept-Language': 'en',
+#     'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) '
+#                   'Chrome/61.0.3163.100 Safari/537.36'
 # }
 
 # Enable or disable spider middlewares
@@ -54,9 +57,11 @@ ROBOTSTXT_OBEY = False
 
 # Enable or disable downloader middlewares
 # See http://scrapy.readthedocs.org/en/latest/topics/downloader-middleware.html
-# DOWNLOADER_MIDDLEWARES = {
-#    'ArticleSpider.middlewares.MyCustomDownloaderMiddleware': 543,
-# }
+DOWNLOADER_MIDDLEWARES = {
+    # 'ArticleSpider.middlewares.JSPageMiddleware': 1,
+    'ArticleSpider.middlewares.RandomUserAgentMiddlware': 543,
+    'scrapy.downloadermiddlewares.useragent.UserAgentMiddleware': None,
+}
 
 # Enable or disable extensions
 # See http://scrapy.readthedocs.org/en/latest/topics/extensions.html
@@ -67,17 +72,23 @@ ROBOTSTXT_OBEY = False
 # Configure item pipelines
 # See http://scrapy.readthedocs.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
-    'ArticleSpider.pipelines.ArticleSpiderPipeline': 300,
+    # 'ArticleSpider.pipelines.ArticleSpiderPipeline': 300,
     # 'scrapy.pipelines.images.ImagesPipeline': 1,
-    'ArticleSpider.pipelines.ArticleImagePipeline': 1,
+    # 'ArticleSpider.pipelines.ArticleImagePipeline': 1,
     # 'ArticleSpider.pipelines.JsonExporterPipeline': 1,
     # 'ArticleSpider.pipelines.MysqlPipeline': 1,
-    'ArticleSpider.pipelines.MysqlTwistedPipeline': 1000
+    'ArticleSpider.pipelines.MysqlTwistedPipeline': 100
 }
 IMAGES_URLS_FIELD = 'front_image_url'
 project_dir = os.path.abspath(os.path.dirname(__file__))
 IMAGES_STORE = os.path.join(project_dir, 'images')
 
+BASE_DIR = os.path.dirname(os.path.abspath(os.path.dirname(__file__)))
+sys.path.insert(0, os.path.join(BASE_DIR, 'ArticleSpider'))
+
+USER_AGENT = "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:51.0) Gecko/20100101 Firefox/51.0"
+
+RANDOM_UA_TYPE = "random"
 # IMAGES_MIN_WIDTH = 100
 # IMAGES_MIN_HEIGHT = 100
 
