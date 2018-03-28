@@ -13,6 +13,8 @@ import scrapy
 from scrapy.loader import ItemLoader
 from scrapy.loader.processors import MapCompose, TakeFirst, Join
 
+from w3lib.html import remove_tags
+
 from ArticleSpider.utils.common import extract_nums
 from ArticleSpider.settings import SQL_DATETIME_FORMAT, SQL_DATE_FORMAT
 
@@ -169,5 +171,95 @@ class ZhihuAnswerItem(scrapy.Item):
         params = (self["zhihu_id"], self["url"], self['question_id'], self["author_id"],
                   self["content"], self["praise_nums"], self["comment_nums"], create_time,
                   update_time, self["crawl_time"].strftime(SQL_DATETIME_FORMAT))
+
+        return insert_sql, params
+
+
+def remove_splash(value):
+    # 去掉工作城市的斜线
+    return value.replace("/", "")
+
+
+def handle_jobaddr(value):
+    addr_list = value.split("\n")
+    addr_list = [item.strip() for item in addr_list if item.strip() != "查看地图"]
+    return "".join(addr_list)
+
+
+class LagouJobItemLoader(ItemLoader):
+    # 自定义itemloader
+    default_output_processor = TakeFirst()
+
+
+class LagouJobItem(scrapy.Item):
+    # 拉钩网职位Item
+    url_object_id = scrapy.Field()
+    url = scrapy.Field()
+    title = scrapy.Field()
+    salary = scrapy.Field()
+    work_years = scrapy.Field(
+        input_processor=MapCompose(remove_splash),
+    )
+    job_city = scrapy.Field(
+        input_processor=MapCompose(remove_splash),
+    )
+    degree_need = scrapy.Field(
+        input_processor=MapCompose(remove_splash),
+    )
+    job_type = scrapy.Field()
+    publish_time = scrapy.Field()
+    tags = scrapy.Field(
+        input_processor=MapCompose(lambda x: x if x is not None else ""),
+        output_processor=Join(',')
+    )
+    job_advantage = scrapy.Field()
+    job_desc = scrapy.Field()
+    job_addr = scrapy.Field(
+        input_processor=MapCompose(remove_tags, handle_jobaddr),
+    )
+    company_url = scrapy.Field()
+    company_name = scrapy.Field()
+    crawl_time = scrapy.Field()
+
+    def get_insert_sql(self):
+        insert_sql = """
+                    insert into lagou_jobs(url_object_id, url, title, salary_min,salary_max,
+                    work_years_min,work_years_max,job_city, degree_need, job_type,publish_time,
+                    tags,job_advantage,job_desc,job_addr,company_url,company_name,crawl_time) 
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) 
+                    ON DUPLICATE KEY UPDATE title=VALUES(title), salary_min=VALUES(salary_min),salary_max=VALUES(salary_max),
+                    work_years_min=VALUES(work_years_min),work_years_max=VALUES(work_years_max),job_city=VALUES(job_city),
+                    degree_need=VALUES(degree_need),job_advantage=VALUES(job_advantage),job_desc=VALUES(job_desc),
+                    job_addr=VALUES(job_addr),company_url=VALUES(company_url),company_name=VALUES(company_name)
+                    """
+
+        match_obj = re.match('.*?(\d+)k-(\d+)k.*', self["salary"])
+        if match_obj:
+            salary_min = match_obj.group(1)
+            salary_max = match_obj.group(2)
+        else:
+            salary_min = 0
+            salary_max = 0
+
+        match_obj = re.match('.*?(\d+)-(\d+)年.*', self["work_years"])
+        if match_obj:
+            work_years_min = match_obj.group(1)
+            work_years_max = match_obj.group(2)
+        else:
+            work_years_min = 0
+            work_years_max = 0
+
+        match_obj = re.match('(.*)发布于拉勾网', self["publish_time"])
+        if match_obj:
+            publish_time = match_obj.group(1).strip()
+        else:
+            publish_time = ''
+
+        params = (
+            self["url_object_id"], self["url"], self["title"], salary_min, salary_max,
+            work_years_min, work_years_max, self["job_city"], self["degree_need"], self["job_type"],
+            publish_time, self["tags"], self["job_advantage"], self["job_desc"], self["job_addr"],
+            self["company_url"], self["company_name"], self["crawl_time"].strftime(SQL_DATETIME_FORMAT),
+        )
 
         return insert_sql, params
