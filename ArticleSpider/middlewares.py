@@ -9,7 +9,7 @@ __author__ = 'dreamkong'
 from scrapy import signals
 from fake_useragent import UserAgent
 
-from ArticleSpider.settings import RANDOM_UA_TYPE
+from tools.crawl_xici_ip import GetIP
 
 
 class ArticlespiderSpiderMiddleware(object):
@@ -76,4 +76,5 @@ class RandomUserAgentMiddlware(object):
             return getattr(self.ua, self.ua_type)
 
         request.headers.setdefault('User-Agent', get_ua())
-        request.meta['proxy'] = '61.135.217.7：80'
+        get_ip = GetIP()
+        request.meta['proxy'] = get_ip.get_random()
