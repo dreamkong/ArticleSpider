@@ -5,6 +5,9 @@ from urllib import parse
 
 import scrapy
 from scrapy.http import Request
+from selenium import webdriver
+from scrapy.xlib.pydispatch import dispatcher
+from scrapy import signals
 
 from ArticleSpider.items import JobBoleArticleItem, ArticleItemLoader
 from ArticleSpider.utils.common import get_md5
@@ -14,6 +17,15 @@ class JobboleSpider(scrapy.Spider):
     name = 'jobbole'
     allowed_domains = ['blog.jobbole.com']
     start_urls = ['http://blog.jobbole.com/all-posts/']
+
+    def __init__(self):
+        self.browser = webdriver.Chrome()
+        super(JobboleSpider, self).__init__()
+        dispatcher.connect(self.spider_close, signals.spider_closed)
+
+    def spider_close(self, spider):
+        print("spider closed")
+        self.browser.quit()
 
     def parse(self, response):
         """
@@ -36,7 +48,6 @@ class JobboleSpider(scrapy.Spider):
             yield Request(url=parse.urljoin(response.url, next_urls), callback=self.parse)
 
     def parse_detail(self, response):
-
         # article_item = JobBoleArticleItem()
         # xpath()
         # title = response.xpath('//div[@class="entry-header"]/h1/text()').extract()[0]
