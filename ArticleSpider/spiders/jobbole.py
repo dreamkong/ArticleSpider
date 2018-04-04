@@ -5,7 +5,7 @@ from urllib import parse
 
 import scrapy
 from scrapy.http import Request
-from selenium import webdriver
+# from selenium import webdriver
 from scrapy.xlib.pydispatch import dispatcher
 from scrapy import signals
 
@@ -18,14 +18,25 @@ class JobboleSpider(scrapy.Spider):
     allowed_domains = ['blog.jobbole.com']
     start_urls = ['http://blog.jobbole.com/all-posts/']
 
-    def __init__(self):
-        self.browser = webdriver.Chrome()
-        super(JobboleSpider, self).__init__()
-        dispatcher.connect(self.spider_close, signals.spider_closed)
+    # def __init__(self):
+    #     self.browser = webdriver.Chrome()
+    #     super(JobboleSpider, self).__init__()
+    #     dispatcher.connect(self.spider_close, signals.spider_closed)
+    #
+    # def spider_close(self, spider):
+    #     print("spider closed")
+    #     self.browser.quit()
 
-    def spider_close(self, spider):
-        print("spider closed")
-        self.browser.quit()
+    def __init__(self):
+        self.fail_urls = []
+        dispatcher.connect(self.handle_spider_closed, signals.spider_closed)
+        super(JobboleSpider, self).__init__()
+
+    # 收集404的url以及404页面数
+    handle_httpstatus_list = [404]
+
+    def handle_spider_closed(self, spider, reason):
+        self.crawler.stats.set_value('failed_urls', ','.join(self.fail_urls))
 
     def parse(self, response):
         """
@@ -35,6 +46,11 @@ class JobboleSpider(scrapy.Spider):
         # post_urls = response.css('.floated-thumb .post-thumb > a::attr(href)').extract()
         # 解析列表页中的所有文章url并交给scrapy下载后并进行解析
         # post_urls = response.css('#archive > div.floated-thumb > div.post-thumb > a::attr(href)').extract()
+
+        if response.status == 404:
+            self.fail_urls.append(response.url)
+            self.crawler.stats.inc_value('failed_url')
+
         post_nodes = response.css('#archive > div.floated-thumb > div.post-thumb > a')
         for post_node in post_nodes:
             front_image_url = post_node.css('img::attr(src)').extract_first('')
